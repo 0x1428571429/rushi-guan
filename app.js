@@ -233,6 +233,16 @@
             ${escapeHtml(q.coda)}
             <br><span class="seal">如是观</span>
           </p>
+          ${
+            q.sutra
+              ? `<aside class="sutra">
+                   <p class="sutra-label">经云</p>
+                   <blockquote class="sutra-quote">${escapeHtml(q.sutra.quote)}</blockquote>
+                   <p class="sutra-source">${escapeHtml(q.sutra.source)}</p>
+                   <p class="sutra-reading">${escapeHtml(q.sutra.reading)}</p>
+                 </aside>`
+              : ""
+          }
           <div class="actions">
             <button class="btn primary" data-action="next-question">再看一题</button>
             <button class="btn ghost" data-action="goto-guan">把此刻的事写下来</button>

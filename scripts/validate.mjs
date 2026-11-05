@@ -66,6 +66,16 @@ function checkQuestion(q, index) {
   }
 
   if (!isNonEmptyString(q.coda)) fail(`${at}.coda`, "缺少收尾一问");
+
+  if (q.sutra === undefined) {
+    warn(`${at}.sutra`, "没有配经文，显影之后会少一层「佛怎么说」");
+  } else if (!isPlainObject(q.sutra)) {
+    fail(`${at}.sutra`, "应为对象 { quote, source, reading }");
+  } else {
+    if (!isNonEmptyString(q.sutra.quote)) fail(`${at}.sutra.quote`, "缺少经文原句");
+    if (!isNonEmptyString(q.sutra.source)) fail(`${at}.sutra.source`, "缺少出处");
+    if (!isNonEmptyString(q.sutra.reading)) fail(`${at}.sutra.reading`, "缺少解读");
+  }
 }
 
 async function main() {
