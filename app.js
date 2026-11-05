@@ -58,6 +58,7 @@
     guanStep: 0,
     guan: { event: "", thought: "", self: "", view: "" },
     entries: [],
+    sutras: [],
     practiceStats: new Map(), // questionId -> { count, lastAt, lastPick }
     lastPickForQuestion: null,
     loadError: null
@@ -141,6 +142,18 @@
     }
 
     return data.questions;
+  }
+
+  async function loadSutras() {
+    const res = await fetch("data/sutras.json", { cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    if (!data || !Array.isArray(data.themes)) {
+      throw new Error("经文格式不正确");
+    }
+
+    return data.themes;
   }
 
   // ---------- 选题 ----------
@@ -245,7 +258,7 @@
           }
           <div class="actions">
             <button class="btn primary" data-action="next-question">再看一题</button>
-            <button class="btn ghost" data-action="goto-guan">把此刻的事写下来</button>
+            <button class="btn ghost" data-action="carry-to-guan">我遇到过类似的事</button>
           </div>
         </section>`
       : "";
@@ -307,6 +320,45 @@
       </div>`;
   }
 
+  // ---------- 视图：经 ----------
+
+  function renderJing() {
+    if (state.sutras.length === 0) {
+      app.innerHTML = `<div class="empty"><p>经文没有加载出来。</p></div>`;
+      return;
+    }
+
+    const themesHtml = state.sutras
+      .map(
+        (theme) => `
+        <section class="jing-theme">
+          <h2 class="jing-title">${escapeHtml(theme.title)}</h2>
+          <p class="jing-note">${escapeHtml(theme.note)}</p>
+          <ul class="jing-list">
+            ${theme.entries
+              .map(
+                (e) => `
+                <li class="jing-entry">
+                  <blockquote class="jing-quote">${escapeHtml(e.quote)}</blockquote>
+                  <p class="jing-source">${escapeHtml(e.source)}</p>
+                  <p class="jing-reading">${escapeHtml(e.reading)}</p>
+                </li>`
+              )
+              .join("")}
+          </ul>
+        </section>`
+      )
+      .join("");
+
+    app.innerHTML = `
+      <div class="view">
+        <p class="eyebrow">经 · 金刚般若波罗蜜经</p>
+        <h1 class="display">佛怎么说</h1>
+        <p class="lede">按主题收的，不是全文。读的时候可以带着一件正在发生的事，慢慢往下看。</p>
+        ${themesHtml}
+      </div>`;
+  }
+
   // ---------- 视图：记 ----------
 
   function renderJi() {
@@ -365,6 +417,7 @@
 
     if (state.view === "kan") renderKan();
     else if (state.view === "guan") renderGuan();
+    else if (state.view === "jing") renderJing();
     else renderJi();
 
     document.querySelectorAll(".tab").forEach((tab) => {
@@ -549,11 +602,17 @@
         render();
         window.scrollTo({ top: 0, behavior: "smooth" });
         break;
-      case "goto-guan":
+      case "carry-to-guan": {
+        const q = state.questions[state.questionIndex];
+        if (!q) break;
+        // 把场景预填进「事」，用户改成自己真实发生的版本
+        state.guan = { event: q.scene, thought: "", self: "", view: "" };
+        state.guanStep = 0;
         state.view = "guan";
         render();
         window.scrollTo({ top: 0, behavior: "smooth" });
         break;
+      }
       case "guan-next":
         guanNext();
         break;
@@ -607,6 +666,12 @@
       state.entries = entries.reverse();
       buildStats(practice);
       state.questions = questions;
+
+      state.sutras = await loadSutras().catch((err) => {
+        console.warn("经文加载失败：", err);
+        return [];
+      });
+
       nextQuestion();
     } catch (err) {
       console.warn("初始化失败：", err);

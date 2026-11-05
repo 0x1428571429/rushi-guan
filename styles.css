@@ -604,6 +604,65 @@ textarea:focus {
 
 .record .delete:hover { color: var(--cinnabar); }
 
+/* ---------- 经 ---------- */
+
+.jing-theme {
+  margin-bottom: 3.2rem;
+  animation: rise 0.5s var(--ease) both;
+}
+
+.jing-title {
+  margin: 0 0 0.45rem;
+  font-family: var(--serif);
+  font-size: 1.12rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--ink);
+}
+
+.jing-note {
+  margin: 0 0 1.5rem;
+  font-size: 0.85rem;
+  line-height: 1.9;
+  color: var(--ink-faint);
+}
+
+.jing-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.7rem;
+}
+
+.jing-entry {
+  padding-left: 1.15rem;
+  border-left: 1px solid var(--line);
+}
+
+.jing-quote {
+  margin: 0 0 0.45rem;
+  font-family: var(--serif);
+  font-size: 1.02rem;
+  line-height: 2.05;
+  letter-spacing: 0.015em;
+  color: var(--ink);
+}
+
+.jing-source {
+  margin: 0 0 0.6rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+}
+
+.jing-reading {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.9;
+  color: var(--ink-soft);
+}
+
 /* ---------- 页脚 ---------- */
 
 .colophon {
@@ -648,4 +707,5 @@ textarea:focus {
   .brand { gap: 0.6rem; }
   .logo { font-size: 1.35rem; }
   .scene { padding: 1.3rem 1.2rem; }
+  .tab { font-size: 0.92rem; padding: 0.3rem 0.42rem; }
 }

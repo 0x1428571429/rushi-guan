@@ -14,6 +14,7 @@ import { dirname, resolve } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dataPath = resolve(here, "../data/questions.json");
+const sutrasPath = resolve(here, "../data/sutras.json");
 
 const errors = [];
 const warnings = [];
@@ -78,6 +79,68 @@ function checkQuestion(q, index) {
   }
 }
 
+async function validateSutras() {
+  let raw;
+  try {
+    raw = await readFile(sutrasPath, "utf8");
+  } catch (err) {
+    fail("sutras.json", `无法读取：${err.message}`);
+    return { themes: 0, entries: 0 };
+  }
+
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    fail("sutras.json", `JSON 解析失败：${err.message}`);
+    return { themes: 0, entries: 0 };
+  }
+
+  if (!isPlainObject(data) || !Array.isArray(data.themes)) {
+    fail("sutras.themes", "必须是数组");
+    return { themes: 0, entries: 0 };
+  }
+
+  const ids = new Set();
+  let entries = 0;
+
+  data.themes.forEach((theme, i) => {
+    const at = `themes[${i}]`;
+
+    if (!isPlainObject(theme)) {
+      fail(at, "不是对象");
+      return;
+    }
+
+    if (!isNonEmptyString(theme.id)) fail(`${at}.id`, "缺少 id");
+    else if (ids.has(theme.id)) fail(`${at}.id`, `id 重复：${theme.id}`);
+    else ids.add(theme.id);
+
+    if (!isNonEmptyString(theme.title)) fail(`${at}.title`, "缺少标题");
+    if (!isNonEmptyString(theme.note)) fail(`${at}.note`, "缺少导语");
+
+    if (!Array.isArray(theme.entries) || theme.entries.length === 0) {
+      fail(`${at}.entries`, "至少需要一条经文");
+      return;
+    }
+
+    theme.entries.forEach((e, j) => {
+      const oat = `${at}.entries[${j}]`;
+      entries += 1;
+
+      if (!isPlainObject(e)) {
+        fail(oat, "不是对象");
+        return;
+      }
+      if (!isNonEmptyString(e.quote)) fail(`${oat}.quote`, "缺少经文原句");
+      if (!isNonEmptyString(e.source)) fail(`${oat}.source`, "缺少出处");
+      if (!isNonEmptyString(e.reading)) fail(`${oat}.reading`, "缺少解读");
+    });
+  });
+
+  return { themes: data.themes.length, entries };
+}
+
 async function main() {
   let raw;
   try {
@@ -122,9 +185,11 @@ async function main() {
   const oCount = Array.isArray(data.questions)
     ? data.questions.reduce((n, q) => n + (Array.isArray(q?.options) ? q.options.length : 0), 0)
     : 0;
+  const sutraStats = await validateSutras();
 
   console.log("");
   console.log(`  题库：${qCount} 题，${oCount} 个选项`);
+  console.log(`  经文：${sutraStats.themes} 组，${sutraStats.entries} 条`);
   console.log(`  版本：v${data.version ?? "?"}　更新：${data.updated ?? "未标注"}`);
   console.log("");
 
