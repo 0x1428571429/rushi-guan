@@ -663,6 +663,75 @@ textarea:focus {
   color: var(--ink-soft);
 }
 
+/* 折叠解说 */
+.jing-detail {
+  margin-top: 0.75rem;
+}
+
+.jing-detail summary {
+  display: inline-block;
+  cursor: pointer;
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  color: var(--cinnabar);
+  list-style: none;
+  user-select: none;
+}
+
+.jing-detail summary::-webkit-details-marker { display: none; }
+
+.jing-detail summary::before {
+  content: "▸ ";
+  font-size: 0.7em;
+  vertical-align: 0.1em;
+}
+
+.jing-detail[open] summary::before { content: "▾ "; }
+
+.jing-detail summary:focus-visible {
+  outline: 1.5px solid var(--cinnabar);
+  outline-offset: 3px;
+}
+
+.jing-body {
+  margin-top: 0.8rem;
+  padding: 1.05rem 1.15rem 1.15rem;
+  background: var(--paper-lift);
+  border: 1px solid var(--line-soft);
+  border-radius: 4px;
+  font-size: 0.88rem;
+  line-height: 1.9;
+  color: var(--ink-soft);
+  animation: rise 0.35s var(--ease) both;
+}
+
+.jing-explain { margin: 0 0 0.95rem; }
+
+.jing-examples {
+  margin: 0 0 0.95rem;
+  padding-left: 1.1rem;
+}
+
+.jing-examples li { margin-bottom: 0.45rem; }
+.jing-examples li:last-child { margin-bottom: 0; }
+
+.jing-practice {
+  margin: 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line-soft);
+  color: var(--ink);
+}
+
+.jing-practice::before {
+  content: "怎么练";
+  display: block;
+  margin-bottom: 0.25rem;
+  font-family: var(--serif);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  color: var(--cinnabar);
+}
+
 /* ---------- 页脚 ---------- */
 
 .colophon {

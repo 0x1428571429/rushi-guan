@@ -342,6 +342,20 @@
                   <blockquote class="jing-quote">${escapeHtml(e.quote)}</blockquote>
                   <p class="jing-source">${escapeHtml(e.source)}</p>
                   <p class="jing-reading">${escapeHtml(e.reading)}</p>
+                  ${
+                    e.explain
+                      ? `<details class="jing-detail">
+                           <summary>展开解说</summary>
+                           <div class="jing-body">
+                             <p class="jing-explain">${escapeHtml(e.explain)}</p>
+                             <ul class="jing-examples">
+                               ${(e.examples || []).map((ex) => `<li>${escapeHtml(ex)}</li>`).join("")}
+                             </ul>
+                             <p class="jing-practice">${escapeHtml(e.practice || "")}</p>
+                           </div>
+                         </details>`
+                      : ""
+                  }
                 </li>`
               )
               .join("")}

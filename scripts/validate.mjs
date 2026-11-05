@@ -135,6 +135,17 @@ async function validateSutras() {
       if (!isNonEmptyString(e.quote)) fail(`${oat}.quote`, "缺少经文原句");
       if (!isNonEmptyString(e.source)) fail(`${oat}.source`, "缺少出处");
       if (!isNonEmptyString(e.reading)) fail(`${oat}.reading`, "缺少解读");
+      if (!isNonEmptyString(e.explain)) fail(`${oat}.explain`, "缺少义理解说");
+
+      if (!Array.isArray(e.examples) || e.examples.length === 0) {
+        fail(`${oat}.examples`, "至少需要一个生活例子");
+      } else {
+        e.examples.forEach((ex, k) => {
+          if (!isNonEmptyString(ex)) fail(`${oat}.examples[${k}]`, "例子为空");
+        });
+      }
+
+      if (!isNonEmptyString(e.practice)) fail(`${oat}.practice`, "缺少怎么练");
     });
   });
 
