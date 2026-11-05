@@ -206,6 +206,7 @@
           <p>${escapeHtml(q.scene)}</p>
           <p class="prompt">${escapeHtml(q.prompt)}</p>
         </div>
+        ${revealed ? "" : `<p class="hint-line">选一个最像你真实反应的。选完会照见每个选项背后的相。</p>`}
         <ul class="options">${optionsHtml}</ul>
         ${developHtml}
       </div>`;
