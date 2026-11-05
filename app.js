@@ -2,12 +2,13 @@
  * 如是观
  *
  * 两个练习：
- *   勘 —— 生活情境里，看见每个反应背后的相（不记录，做完就放下）
+ *   勘 —— 生活情境里，看见每个反应背后的相。练完一轮，重新洗牌，再来。
  *   观 —— 把当下的一次反应，拆成事、念、我、观四步（可存下）
  *
  * 设计上的三条约束：
- *   1. 不打卡、不记分、不排名。勘的结果完全不落盘。
- *   2. 所有文字只存在 localStorage，不发往任何服务器。
+ *   1. 不打卡、不记分、不排名。练习记录只用来决定"下一题出什么"，
+ *      以及在你再次遇到同一题时，告诉你上次选了哪个——不判对错。
+ *   2. 所有文字只存在这台设备的 IndexedDB 里，不发往任何服务器。
  *   3. 没有"正确答案"，只有"看见"。
  */
 
@@ -15,9 +16,6 @@
   "use strict";
 
   // ---------- 常量 ----------
-
-  const STORAGE_KEY = "rushi:entries";
-  const STORAGE_VERSION = 1;
 
   const GUAN_STEPS = [
     {
@@ -60,10 +58,10 @@
     guanStep: 0,
     guan: { event: "", thought: "", self: "", view: "" },
     entries: [],
+    practiceStats: new Map(), // questionId -> { count, lastAt, lastPick }
+    lastPickForQuestion: null,
     loadError: null
   };
-
-  let store = { version: STORAGE_VERSION, entries: [] };
 
   const app = document.getElementById("app");
 
@@ -89,43 +87,46 @@
     return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
   }
 
-  // ---------- 存储 ----------
-
-  function loadStore() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { version: STORAGE_VERSION, entries: [] };
-
-      const parsed = JSON.parse(raw);
-
-      // 版本迁移的入口。将来 schema 变化时，在这里按版本转换。
-      if (!parsed || typeof parsed !== "object") {
-        return { version: STORAGE_VERSION, entries: [] };
-      }
-      if (parsed.version !== STORAGE_VERSION) {
-        return { version: STORAGE_VERSION, entries: [] };
-      }
-      if (!Array.isArray(parsed.entries)) {
-        return { version: STORAGE_VERSION, entries: [] };
-      }
-
-      return {
-        version: STORAGE_VERSION,
-        entries: parsed.entries.filter(
-          (e) => e && typeof e === "object" && typeof e.id === "string"
-        )
-      };
-    } catch {
-      return { version: STORAGE_VERSION, entries: [] };
-    }
+  function optionLetter(i) {
+    return String.fromCharCode(65 + i);
   }
 
-  function persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-    } catch (err) {
-      console.warn("写入 localStorage 失败：", err);
+  // ---------- 练习统计 ----------
+
+  function buildStats(records) {
+    const stats = new Map();
+
+    for (const r of records) {
+      if (!r || typeof r.questionId !== "string") continue;
+
+      const s = stats.get(r.questionId) || { count: 0, lastAt: 0, lastPick: null };
+      s.count += 1;
+
+      if (r.createdAt >= s.lastAt) {
+        s.lastAt = r.createdAt;
+        s.lastPick = r.pickedIndex;
+      }
+
+      stats.set(r.questionId, s);
     }
+
+    state.practiceStats = stats;
+  }
+
+  /**
+   * 第几轮：所有题里最少的练习次数 + 1。
+   * 全部题都至少练过一次，才算进入第二轮。
+   */
+  function computeRound() {
+    if (state.questions.length === 0) return 1;
+
+    let min = Infinity;
+    for (const q of state.questions) {
+      const s = state.practiceStats.get(q.id);
+      min = Math.min(min, s ? s.count : 0);
+    }
+
+    return min + 1;
   }
 
   // ---------- 题库 ----------
@@ -133,11 +134,44 @@
   async function loadQuestions() {
     const res = await fetch("data/questions.json", { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
     const data = await res.json();
     if (!data || !Array.isArray(data.questions) || data.questions.length === 0) {
       throw new Error("题库格式不正确");
     }
+
     return data.questions;
+  }
+
+  // ---------- 选题 ----------
+
+  function nextQuestion() {
+    const n = state.questions.length;
+    if (n === 0) return;
+
+    const pool =
+      n === 1 ? state.questions : state.questions.filter((_, i) => i !== state.questionIndex);
+
+    // 1. 没练过的题优先
+    const fresh = pool.filter((q) => !state.practiceStats.has(q.id));
+
+    let chosen;
+    if (fresh.length > 0) {
+      chosen = fresh[Math.floor(Math.random() * fresh.length)];
+    } else {
+      // 2. 都练过了，出最久没练的
+      const withTime = pool.map((q) => ({
+        q,
+        at: state.practiceStats.get(q.id)?.lastAt ?? 0
+      }));
+      const oldest = Math.min(...withTime.map((x) => x.at));
+      const candidates = withTime.filter((x) => x.at === oldest);
+      chosen = candidates[Math.floor(Math.random() * candidates.length)].q;
+    }
+
+    state.questionIndex = state.questions.indexOf(chosen);
+    state.picked = null;
+    state.lastPickForQuestion = state.practiceStats.get(chosen.id)?.lastPick ?? null;
   }
 
   // ---------- 视图：勘 ----------
@@ -151,6 +185,13 @@
     const q = state.questions[state.questionIndex];
     const picked = state.picked;
     const revealed = picked !== null;
+    const round = computeRound();
+
+    const hint = revealed
+      ? ""
+      : state.lastPickForQuestion !== null
+        ? `上次遇到这题，你选了 ${optionLetter(state.lastPickForQuestion)}。这次呢？`
+        : "选一个最像你真实反应的。选完会照见每个选项背后的相。";
 
     const optionsHtml = q.options
       .map((opt, i) => {
@@ -180,7 +221,7 @@
                 (opt, i) => `
                 <li class="reveal">
                   <div class="reveal-head">
-                    <span class="reveal-key">${String.fromCharCode(65 + i)}${picked === i ? " · 你选的" : ""}</span>
+                    <span class="reveal-key">${optionLetter(i)}${picked === i ? " · 你选的" : ""}</span>
                   </div>
                   <p class="reveal-opt">${escapeHtml(opt.text)}</p>
                   <p>${escapeHtml(opt.note)}</p>
@@ -201,12 +242,12 @@
 
     app.innerHTML = `
       <div class="view">
-        <p class="eyebrow">勘 · 第 ${state.questionIndex + 1} 题</p>
+        <p class="eyebrow">勘 · 第 ${round} 轮</p>
         <div class="scene">
           <p>${escapeHtml(q.scene)}</p>
           <p class="prompt">${escapeHtml(q.prompt)}</p>
         </div>
-        ${revealed ? "" : `<p class="hint-line">选一个最像你真实反应的。选完会照见每个选项背后的相。</p>`}
+        ${hint ? `<p class="hint-line">${escapeHtml(hint)}</p>` : ""}
         <ul class="options">${optionsHtml}</ul>
         ${developHtml}
       </div>`;
@@ -325,30 +366,33 @@
 
   // ---------- 勘：行为 ----------
 
-  function nextQuestion() {
-    const n = state.questions.length;
-    if (n === 0) return;
-
-    let idx = state.questionIndex;
-    if (n === 1) {
-      idx = 0;
-    } else {
-      while (idx === state.questionIndex) {
-        idx = Math.floor(Math.random() * n);
-      }
-    }
-
-    state.questionIndex = idx;
-    state.picked = null;
-  }
-
   function pickOption(index) {
     if (state.picked !== null) return;
-    if (!Number.isInteger(index)) return;
-    if (index < 0 || index >= state.questions[state.questionIndex].options.length) return;
+
+    const q = state.questions[state.questionIndex];
+    if (!q) return;
+    if (!Number.isInteger(index) || index < 0 || index >= q.options.length) return;
 
     state.picked = index;
+
+    // 先更新内存统计，界面立刻反映轮次变化
+    const prev = state.practiceStats.get(q.id) || { count: 0, lastAt: 0, lastPick: null };
+    const now = Date.now();
+    state.practiceStats.set(q.id, {
+      count: prev.count + 1,
+      lastAt: now,
+      lastPick: index
+    });
+
     render();
+
+    // 再异步落盘。写失败不影响这次练习。
+    putPractice({
+      id: uid(),
+      questionId: q.id,
+      pickedIndex: index,
+      createdAt: now
+    }).catch((err) => console.warn("练习记录保存失败：", err));
 
     requestAnimationFrame(() => {
       document.querySelector(".develop")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -365,10 +409,12 @@
 
   function guanNext() {
     syncGuanInput();
+
     if (!state.guan[GUAN_STEPS[state.guanStep].key].trim()) {
       document.getElementById("guan-input")?.focus();
       return;
     }
+
     if (state.guanStep < GUAN_STEPS.length - 1) {
       state.guanStep += 1;
       render();
@@ -383,7 +429,7 @@
     }
   }
 
-  function guanSave() {
+  async function guanSave() {
     syncGuanInput();
 
     const lastKey = GUAN_STEPS[GUAN_STEPS.length - 1].key;
@@ -401,9 +447,13 @@
       view: state.guan.view.trim()
     };
 
-    store.entries.push(entry);
-    persist();
-    state.entries = store.entries.slice().reverse();
+    try {
+      await putEntry(entry);
+      state.entries = (await getAllEntries()).reverse();
+    } catch (err) {
+      console.warn("保存失败：", err);
+      return;
+    }
 
     // 存下之后清空，下一次是新的开始
     state.guan = { event: "", thought: "", self: "", view: "" };
@@ -424,11 +474,14 @@
 
   // ---------- 记：行为 ----------
 
-  function deleteEntry(id) {
-    store.entries = store.entries.filter((e) => e.id !== id);
-    persist();
-    state.entries = store.entries.slice().reverse();
-    render();
+  async function deleteEntry(id) {
+    try {
+      await removeEntry(id);
+      state.entries = (await getAllEntries()).reverse();
+      render();
+    } catch (err) {
+      console.warn("删除失败：", err);
+    }
   }
 
   function exportEntries() {
@@ -532,14 +585,21 @@
   // ---------- 启动 ----------
 
   async function init() {
-    store = loadStore();
-    state.entries = store.entries.slice().reverse();
-
     try {
-      state.questions = await loadQuestions();
+      await migrateLegacyEntries();
+
+      const [entries, practice, questions] = await Promise.all([
+        getAllEntries(),
+        getAllPractice(),
+        loadQuestions()
+      ]);
+
+      state.entries = entries.reverse();
+      buildStats(practice);
+      state.questions = questions;
       nextQuestion();
     } catch (err) {
-      console.warn("题库加载失败：", err);
+      console.warn("初始化失败：", err);
       state.loadError = err;
     }
 

@@ -26,7 +26,7 @@
 
 包括"我选了最清醒的那个"这个念头本身，也是相。
 
-**勘的结果不落盘。** 做完就放下，不留记录。
+**勘的结果不做统计，也不排名。** 练习记录只用来做两件事：决定下一题出什么，以及在你再次遇到同一题时，告诉你上次选了哪个。练完一轮自动进入下一轮——轮次是圈数，不是成绩。
 
 ### 观
 
@@ -108,6 +108,7 @@ npm run validate
 ├── index.html          页面骨架
 ├── styles.css          宣纸、墨、朱砂
 ├── app.js              视图与交互（原生 JS，无框架）
+├── db.js               IndexedDB 封装（entries / practice）
 ├── data/
 │   └── questions.json  题库
 ├── scripts/
@@ -118,10 +119,11 @@ npm run validate
 
 ## 数据与隐私
 
-- "观"的记录存在 `localStorage`，键名 `rushi:entries`，带 schema 版本号。
-- "勘"的选择不存储。
+- 「观」的记录存在 IndexedDB 的 `entries` store，「勘」的练习记录存在 `practice` store（库名 `rushi`）。
+- 练习记录只用于选题和显示上次选择，不做正确率、不做连续天数、不做排名。
 - 没有分析、没有埋点、没有网络请求（除了加载题库本身）。
 - 换设备不会同步。导出 Markdown 是唯一的搬运方式。
+- 旧版 localStorage 数据会在首次打开时自动迁移。
 
 ## License
 
