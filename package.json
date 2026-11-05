@@ -1,0 +1,11 @@
+{
+  "name": "rushi-guan",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "如是观 —— 一个自我纠正思维的练习场：不打卡，不记分，只看见。",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "validate": "node scripts/validate.mjs"
+  }
+}
